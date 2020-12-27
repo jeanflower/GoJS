@@ -30,6 +30,7 @@
           "draggingTool.isGridSnapEnabled": true,
           handlesDragDropForTopLevelParts: true,
           mouseDrop: function (e) {
+            console.log(`mouseDrop`);
             // when the selection is dropped in the diagram's background,
             // make sure the selected Parts no longer belong to any Group
             var ok = e.diagram.commandHandler.addTopLevelParts(
@@ -39,8 +40,12 @@
             if (!ok) e.diagram.currentTool.doCancel();
           },
           commandHandler: $(DrawCommandHandler), // support offset copy-and-paste
-          "clickCreatingTool.archetypeNodeData": { text: "node text" }, // create a new node by double-clicking in background
+          "clickCreatingTool.archetypeNodeData": {
+            text: "node text",
+            figure:"Ellipse",
+          }, // create a new node by double-clicking in background
           PartCreated: function (e) {
+            console.log(`PartCreated`);
             var node = e.subject; // the newly inserted Node -- now need to snap its location to the grid
             node.location = node.location
               .copy()
@@ -53,18 +58,9 @@
               e.diagram.commandHandler.editTextBlock();
             }, 20);
           },
-          "commandHandler.archetypeGroupData": {
-            isGroup: true,
-            text: "NEW GROUP",
-          },
-          SelectionGrouped: function (e) {
-            var group = e.subject;
-            setTimeout(function () {
-              // and have the user start editing its text
-              e.diagram.commandHandler.editTextBlock();
-            });
-          },
           LinkRelinked: function (e) {
+            console.log(`LinkRelinked`);
+
             // re-spread the connections of other links connected with both old and new nodes
             var oldnode = e.parameter.part;
             oldnode.invalidateConnectedLinks();
@@ -165,9 +161,11 @@
         // and add a link to the new node.
 
         function makeArrowButton(spot, fig) {
+          console.log(`makeArrowButton`);
           var maker = function (e, shape) {
             e.handled = true;
             e.diagram.model.commit(function (m) {
+              console.log(`makeArrowButton maker commit`);
               var selnode = shape.part.adornedPart;
               // create a new node in the direction of the spot
               var p = new go.Point().setRectSpot(selnode.actualBounds, spot);
@@ -192,7 +190,6 @@
               var linkdata = {
                 from: selnode.key,
                 to: m.getKeyForNodeData(nodedata),
-                text: "arrow text"
               };
               m.addLinkData(linkdata); // add to model
               // move the new node to the computed location, select it, and start to edit it
@@ -268,124 +265,6 @@
               m.set(obj.part.adornedPart.data, propname, value);
             });
           };
-        }
-
-        // Create a context menu button for setting a data property with a color value.
-        function ColorButton(color, propname) {
-          if (!propname) propname = "color";
-          return $(go.Shape, {
-            width: 16,
-            height: 16,
-            stroke: "lightgray",
-            fill: color,
-            margin: 1,
-            background: "transparent",
-            mouseEnter: function (e, shape) {
-              shape.stroke = "dodgerblue";
-            },
-            mouseLeave: function (e, shape) {
-              shape.stroke = "lightgray";
-            },
-            click: ClickFunction(propname, color),
-            contextClick: ClickFunction(propname, color),
-          });
-        }
-
-        function LightFillButtons() {
-          // used by multiple context menus
-          return [
-            $(
-              "ContextMenuButton",
-              $(
-                go.Panel,
-                "Horizontal",
-                ColorButton("white", "fill"),
-                ColorButton("beige", "fill"),
-                ColorButton("aliceblue", "fill"),
-                ColorButton("lightyellow", "fill")
-              )
-            ),
-            $(
-              "ContextMenuButton",
-              $(
-                go.Panel,
-                "Horizontal",
-                ColorButton("lightgray", "fill"),
-                ColorButton("lightgreen", "fill"),
-                ColorButton("lightblue", "fill"),
-                ColorButton("pink", "fill")
-              )
-            ),
-          ];
-        }
-
-        function DarkColorButtons() {
-          // used by multiple context menus
-          return [
-            $(
-              "ContextMenuButton",
-              $(
-                go.Panel,
-                "Horizontal",
-                ColorButton("black"),
-                ColorButton("green"),
-                ColorButton("blue"),
-                ColorButton("red")
-              )
-            ),
-            $(
-              "ContextMenuButton",
-              $(
-                go.Panel,
-                "Horizontal",
-                ColorButton("brown"),
-                ColorButton("magenta"),
-                ColorButton("purple"),
-                ColorButton("orange")
-              )
-            ),
-          ];
-        }
-
-        // Create a context menu button for setting a data property with a stroke width value.
-        function ThicknessButton(sw, propname) {
-          if (!propname) propname = "thickness";
-          return $(go.Shape, "LineH", {
-            width: 16,
-            height: 16,
-            strokeWidth: sw,
-            margin: 1,
-            background: "transparent",
-            mouseEnter: function (e, shape) {
-              shape.background = "dodgerblue";
-            },
-            mouseLeave: function (e, shape) {
-              shape.background = "transparent";
-            },
-            click: ClickFunction(propname, sw),
-            contextClick: ClickFunction(propname, sw),
-          });
-        }
-
-        // Create a context menu button for setting a data property with a stroke dash Array value.
-        function DashButton(dash, propname) {
-          if (!propname) propname = "dash";
-          return $(go.Shape, "LineH", {
-            width: 24,
-            height: 16,
-            strokeWidth: 2,
-            strokeDashArray: dash,
-            margin: 1,
-            background: "transparent",
-            mouseEnter: function (e, shape) {
-              shape.background = "dodgerblue";
-            },
-            mouseLeave: function (e, shape) {
-              shape.background = "transparent";
-            },
-            click: ClickFunction(propname, dash),
-            contextClick: ClickFunction(propname, dash),
-          });
         }
 
         // Node context menu
@@ -559,6 +438,7 @@
           ),
           $(
             go.TextBlock,
+            "arrow text",
             { alignmentFocus: new go.Spot(0, 1, -4, 0), editable: true },
             new go.Binding("text").makeTwoWay(), // TwoWay due to user editing with TextEditingTool
             new go.Binding("stroke", "color")
@@ -595,6 +475,8 @@
 
       // Show the diagram's model in JSON format
       function editorToText() {
+        console.log(`graph has ${myDiagram.model.nodeDataArray.length} nodes`);
+
         document.getElementById(
           "mySavedModel"
         ).value = myDiagram.model.toJson();
@@ -633,20 +515,13 @@
             {"key":1, "loc":"0 0", "text":"Alpha", "figure":"RoundedRectangle"},
             {"key":2, "loc":"170 0", "text":"Beta", "figure":"RoundedRectangle"},
             {"key":3, "loc":"0 100", "text":"Gamma", "figure":"RoundedRectangle"},
-            {"key":4, "loc":"80 180", "text":"Delta", "figure":"RoundedRectangle"},
-            {"key":5, "loc":"350 -50", "text":"Zeta", "figure":"Ellipse"},
-            {"key":6, "loc":"350 50", "text":"Eta", "figure":"Ellipse"},
-            {"key":8, "loc":"520 50", "text":"Iota", "figure":"Ellipse"}
+            {"key":4, "loc":"80 180", "text":"Delta", "figure":"Ellipse"}
         ],
           "linkDataArray": [ 
             {"from":1, "to":2, "text":"rfwfe"},
             {"from":1, "to":3, "text":"label"},
             {"from":3, "to":4, "text":"a wrgwfe label"},
-            {"from":2, "to":1, "text":"a dbdbg label"},
-            {"from":5, "to":6, "text":"in a group"},
-            {"from":6, "to":8, "text":"a bcb label"},
-            {"from":6, "to":8, "text":"a sv label"},
-            {"from":6, "to":8, "text":"a resvds label"}
+            {"from":2, "to":1, "text":"a dbdbg label"}
         ]}
       </textarea>
     </div>
