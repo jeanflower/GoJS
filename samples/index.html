@@ -42,7 +42,7 @@
           },
           commandHandler: $(DrawCommandHandler), // support offset copy-and-paste
           "clickCreatingTool.archetypeNodeData": {
-            text: "node text",
+            text: "n", // default node text
             figure:"Ellipse",
           }, // create a new node by double-clicking in background
           PartCreated: function (e) {
@@ -420,7 +420,7 @@
           ),
           $(
             go.TextBlock,
-            "arrow text",
+            "a", // default arrow text
             { alignmentFocus: new go.Spot(0, 1, -4, 0), editable: true },
             new go.Binding("text").makeTwoWay(), // TwoWay due to user editing with TextEditingTool
             new go.Binding("stroke", "color")
