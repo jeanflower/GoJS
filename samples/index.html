@@ -473,10 +473,23 @@
         return false;
       }
 
-      function generateLatexFromModel(model){
+      function generateLatexFromModel(model, nodeStrategy){
         console.log("generateLatexFromModel");
         let nodesList = JSON.parse(JSON.stringify(model.nodeDataArray));
-        let linksList = JSON.parse(JSON.stringify(model.linkDataArray));
+
+        const getCircularReplacer = () => {
+          const seen = new WeakSet();
+          return (key, value) => {
+            if (typeof value === "object" && value !== null) {
+              if (seen.has(value)) {
+                return "repeat";
+              }
+              seen.add(value);
+            }
+            return value;
+          };
+        };
+        let linksList = JSON.parse(JSON.stringify(model.linkDataArray, getCircularReplacer()));
         console.log(`nodes:`);
         nodesList.forEach((n)=>{
           const loc = n.loc;
@@ -486,197 +499,212 @@
           console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
         });
 
-        // sort nodes by y then by x
-        nodesList = nodesList.sort((a,b)=>{
-          return a.y > b.y ? 1 : (a.y < b.y ? -1 : 
-            (a.x > b.x ? 1 : (a.x < b.x ? -1 : 0)));
-        });
-        console.log(`sorted:`);
-        nodesList.forEach((n)=>{
-          console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
-        });
-
-
-        console.log("determine refNodes for relative placing of nodes - use arrows");
-        for( let i = 1; i < nodesList.length; i = i + 1){
-          const n = nodesList[i];
-
-          console.log(`look for a ref for node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
-          // look for an arrow from this node to one
-          // which has already been placed in a higher level
-          for( let j = i - 1; j >= 0; j = j - 1){
-            console.log(`can we use ${nodesList[j].text} as reference for ${n.text}?`);
-            if(n.y !== nodesList[j].y){
-              if(arrowFrom(nodesList, linksList, j, i)){
-                console.log(`used ${nodesList[j].text} as refNode for ${n.text}`);
-                n.refNode = nodesList[j];
-                n.belowText = 'below ';
-                break; // no need to look for another reference node
-              }
-            }
-          }
-        }
-
-        console.log("determine refNodes for relative placing of nodes - use neighbours");
-        // Some nodes may have refNode undefined
-        // It's to be expected that the first node has no refNode.
-        // Assume that others with undefined refNodes can be placed
-        // relative to some other node either before or after, 
-        // preferably relative to a node in the same layer.
-        //
-        // If we iterate here and don't place anything new then stop
-        let placedSomething = true;
-        while(placedSomething && nodesList.filter((n)=>{
-          return n.refNode === undefined;
-        }).length > 1){
-          // there's something to define still
-          placedSomething = false;
-          for(let i = 1; i < nodesList.length; i = i + 1){
-            const n = nodesList[i];
-            if(n.refNode !== undefined){
-              continue; // already have a refNode
-            }
-            if(nodesList[i-1].y === n.y){
-              n.refNode = nodesList[i-1];
-              n.belowText = '';
-              placedSomething = true;
-              console.log(`used previous node as refNode for ${n.text}`);
-              break; // don't look for another refNode
-            } else if(nodesList[i+1] !== undefined && nodesList[i+1].y === n.y){
-              n.refNode = nodesList[i+1];
-              n.belowText = '';
-              placedSomething = true;
-              console.log(`used next node as refNode for ${n.text}`);
-              break; // don't look for another refNode
-            } else {
-              n.refNode = nodesList[i-1];
-              n.belowText = '';
-              placedSomething = true;
-              console.log(`used previous node as refNode for ${n.text}`);
-              break; // don't look for another refNode
-            }
-          }
-        }
-
-        // If we have multiple nodes from the same reference node, on the same layer,
-        // apply an x-shift to separate them.
-        for(let i = 1; i < nodesList.length - 1; i = i + 1){
-          const referrers = nodesList.filter((n)=>{
-            return n.refNode === nodesList[i];
-          });
-          if(referrers.length <= 1){
-            continue;
-          } else if(referrers.length === 2){
-            referrers[0].xshift = "-0.5cm";
-            referrers[0].leftright = "left ";
-            referrers[1].xshift = "0.5cm";
-            referrers[1].leftright = "right ";
-          } else if(referrers.length === 3){
-            referrers[0].xshift = "-0.5cm";
-            referrers[0].leftright = "left ";
-            referrers[2].xshift = "0.5cm";
-            referrers[2].leftright = "right ";
-          }
-        }
-        // If n has a refNode at the same y, use an xshift
-        for(let i = 1; i < nodesList.length - 1; i = i + 1){
-          const n = nodesList[i];
-          if(n.refNode && n.y === n.refNode.y){
-            if(n.xshift === undefined){
-              const refIndex = nodesList.findIndex((x)=>{
-                return x.key === n.refNode.key;
-              });
-              if(refIndex < i){
-                n.xshift = "0.5cm";
-                n.leftright = "right ";
-              } else if(refIndex > i){
-                n.xshift = "-0.5cm";
-                n.leftright = "left ";
-              } 
-            }
-          }
-        }
-
-        console.log("determine refNodes for relative placing of nodes - adjust order");
-        // if any refNode is not before this, we need to adjust the 
-        // ordering
-        // continue until we no longer make adjustments
-        let adjustedSomething = true;
-        let numSwaps = 0;
-        while(numSwaps < 2 && adjustedSomething){
-          for(let i = 1; i < nodesList.length; i = i + 1){
-            adjustedSomething = false;
-            const n = nodesList[i];
-            if(n.refNode !== undefined){
-              const refKey = n.refNode.key;
-              const refIndex = nodesList.findIndex((nn)=>{
-                return nn.key === refKey;
-              });
-              if(refIndex > i){
-                // do some work; item at refIndex needs to be inserted
-                // before ith
-                console.log(`swap nodes : ${nodesList[refIndex].text} and ${nodesList[i].text}`);
-                console.log(`pre-swap:`);
-                nodesList.forEach((n)=>{
-                  console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
-                });
-                const nodeToMove = nodesList[refIndex];
-                nodesList.splice(refIndex, 1);
-                nodesList.splice(i, 0, nodeToMove);
-                adjustedSomething = true;
-                numSwaps = numSwaps + 1;
-                console.log(`post-swap:`);
-                nodesList.forEach((n)=>{
-                  console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
-                });
-
-                break;
-              }
-            }
-          }
-        }
-
-        // handle arrows with matchinf sources and targets - add bend
-        for( let i = 0; i < linksList.length; i = i + 1){
-          const link = linksList[i];
-          if(link.bend === undefined){
-            const sameLinks = linksList.filter((l)=>{
-              return l.from === link.from && l.to === link.to;
-            });
-            if(sameLinks.length === 2){
-              sameLinks[0].bend = "[bend left = 30] ";
-              sameLinks[1].bend = "[bend right = 30] ";
-            } else if(sameLinks.length === 3){
-              sameLinks[0].bend = "[bend left = 30] ";
-              sameLinks[1].bend = "[bend right = 0] ";
-              sameLinks[2].bend = "[bend right = 30] ";
-            } else if(sameLinks.length === 4){
-              let angle = 0;
-              for( let j = 0; j < sameLinks.length; j = j + 1){
-                sameLinks[j].bend = `[bend right = ${angle}] `;
-                angle = angle + 5;
-              }
-            }
-          }
-        }        
-        
         let latex = "\\begin{tikzpicture}[construction]\n";
-        for( let i = 0; i < nodesList.length; i = i + 1){
-          const n = nodesList[i];
-          const label = n.text;
-          const type = (n.figure === "Ellipse") ? 
-            "constructor" : 
-            "term";
-          const leftRightText = n.leftright === undefined ?
-            '' :
-            n.leftright;
-          const placing = n.refNode === undefined ? 
-            "" :
-            `, ${n.belowText}${leftRightText}= of ${n.refNode.text}`
-          const xshift = n.xshift === undefined ?
-            ", xshift = 0.0cm" :
-            `, xshift = ${n.xshift}`;
-          latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}, yshift = 0.0cm] ($${label}$) {$${label}$};\n`;
+
+        if(nodeStrategy === "rows"){
+          // sort nodes by y then by x
+          nodesList = nodesList.sort((a,b)=>{
+            return a.y > b.y ? 1 : (a.y < b.y ? -1 : 
+              (a.x > b.x ? 1 : (a.x < b.x ? -1 : 0)));
+          });
+          console.log(`sorted:`);
+          nodesList.forEach((n)=>{
+            console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+          });
+
+          console.log("determine refNodes for relative placing of nodes - use arrows");
+          for( let i = 1; i < nodesList.length; i = i + 1){
+            const n = nodesList[i];
+
+            console.log(`look for a ref for node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+            // look for an arrow from this node to one
+            // which has already been placed in a higher level
+            for( let j = i - 1; j >= 0; j = j - 1){
+              console.log(`can we use ${nodesList[j].text} as reference for ${n.text}?`);
+              if(n.y !== nodesList[j].y){
+                if(arrowFrom(nodesList, linksList, j, i)){
+                  console.log(`used ${nodesList[j].text} as refNode for ${n.text}`);
+                  n.refNode = nodesList[j];
+                  n.belowText = 'below ';
+                  break; // no need to look for another reference node
+                }
+              }
+            }
+          }
+
+          console.log("determine refNodes for relative placing of nodes - use neighbours");
+          // Some nodes may have refNode undefined
+          // It's to be expected that the first node has no refNode.
+          // Assume that others with undefined refNodes can be placed
+          // relative to some other node either before or after, 
+          // preferably relative to a node in the same layer.
+          //
+          // If we iterate here and don't place anything new then stop
+          let placedSomething = true;
+          while(placedSomething && nodesList.filter((n)=>{
+            return n.refNode === undefined;
+          }).length > 1){
+            // there's something to define still
+            placedSomething = false;
+            for(let i = 1; i < nodesList.length; i = i + 1){
+              const n = nodesList[i];
+              if(n.refNode !== undefined){
+                continue; // already have a refNode
+              }
+              if(nodesList[i-1].y === n.y){
+                n.refNode = nodesList[i-1];
+                n.belowText = '';
+                placedSomething = true;
+                console.log(`used previous node as refNode for ${n.text}`);
+                break; // don't look for another refNode
+              } else if(nodesList[i+1] !== undefined && nodesList[i+1].y === n.y){
+                n.refNode = nodesList[i+1];
+                n.belowText = '';
+                placedSomething = true;
+                console.log(`used next node as refNode for ${n.text}`);
+                break; // don't look for another refNode
+              } else {
+                n.refNode = nodesList[i-1];
+                n.belowText = '';
+                placedSomething = true;
+                console.log(`used previous node as refNode for ${n.text}`);
+                break; // don't look for another refNode
+              }
+            }
+          }
+
+          // If we have multiple nodes from the same reference node, on the same layer,
+          // apply an x-shift to separate them.
+          for(let i = 1; i < nodesList.length - 1; i = i + 1){
+            const referrers = nodesList.filter((n)=>{
+              return n.refNode === nodesList[i];
+            });
+            if(referrers.length <= 1){
+              continue;
+            } else if(referrers.length === 2){
+              referrers[0].xshift = "-0.5cm";
+              referrers[0].leftright = "left ";
+              referrers[1].xshift = "0.5cm";
+              referrers[1].leftright = "right ";
+            } else if(referrers.length === 3){
+              referrers[0].xshift = "-0.5cm";
+              referrers[0].leftright = "left ";
+              referrers[2].xshift = "0.5cm";
+              referrers[2].leftright = "right ";
+            }
+          }
+          // If n has a refNode at the same y, use an xshift
+          for(let i = 1; i < nodesList.length - 1; i = i + 1){
+            const n = nodesList[i];
+            if(n.refNode && n.y === n.refNode.y){
+              if(n.xshift === undefined){
+                const refIndex = nodesList.findIndex((x)=>{
+                  return x.key === n.refNode.key;
+                });
+                if(refIndex < i){
+                  n.xshift = "0.5cm";
+                  n.leftright = "right ";
+                } else if(refIndex > i){
+                  n.xshift = "-0.5cm";
+                  n.leftright = "left ";
+                } 
+              }
+            }
+          }
+
+          console.log("determine refNodes for relative placing of nodes - adjust order");
+          // if any refNode is not before this, we need to adjust the 
+          // ordering
+          // continue until we no longer make adjustments
+          let adjustedSomething = true;
+          let numSwaps = 0;
+          while(numSwaps < 2 && adjustedSomething){
+            for(let i = 1; i < nodesList.length; i = i + 1){
+              adjustedSomething = false;
+              const n = nodesList[i];
+              if(n.refNode !== undefined){
+                const refKey = n.refNode.key;
+                const refIndex = nodesList.findIndex((nn)=>{
+                  return nn.key === refKey;
+                });
+                if(refIndex > i){
+                  // do some work; item at refIndex needs to be inserted
+                  // before ith
+                  console.log(`swap nodes : ${nodesList[refIndex].text} and ${nodesList[i].text}`);
+                  console.log(`pre-swap:`);
+                  nodesList.forEach((n)=>{
+                    console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+                  });
+                  const nodeToMove = nodesList[refIndex];
+                  nodesList.splice(refIndex, 1);
+                  nodesList.splice(i, 0, nodeToMove);
+                  adjustedSomething = true;
+                  numSwaps = numSwaps + 1;
+                  console.log(`post-swap:`);
+                  nodesList.forEach((n)=>{
+                    console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+                  });
+
+                  break;
+                }
+              }
+            }
+          }
+
+          // handle arrows with matchinf sources and targets - add bend
+          for( let i = 0; i < linksList.length; i = i + 1){
+            const link = linksList[i];
+            if(link.bend === undefined){
+              const sameLinks = linksList.filter((l)=>{
+                return l.from === link.from && l.to === link.to;
+              });
+              if(sameLinks.length === 2){
+                sameLinks[0].bend = "[bend left = 30] ";
+                sameLinks[1].bend = "[bend right = 30] ";
+              } else if(sameLinks.length === 3){
+                sameLinks[0].bend = "[bend left = 30] ";
+                sameLinks[1].bend = "[bend right = 0] ";
+                sameLinks[2].bend = "[bend right = 30] ";
+              } else if(sameLinks.length === 4){
+                let angle = 0;
+                for( let j = 0; j < sameLinks.length; j = j + 1){
+                  sameLinks[j].bend = `[bend right = ${angle}] `;
+                  angle = angle + 5;
+                }
+              }
+            }
+          }        
+          
+          for( let i = 0; i < nodesList.length; i = i + 1){
+            const n = nodesList[i];
+            const label = n.text;
+            const type = (n.figure === "Ellipse") ? 
+              "constructor" : 
+              "term";
+            const leftRightText = n.leftright === undefined ?
+              '' :
+              n.leftright;
+            const placing = n.refNode === undefined ? 
+              "" :
+              `, ${n.belowText}${leftRightText}= of ${n.refNode.text}`
+            const xshift = n.xshift === undefined ?
+              ", xshift = 0.0cm" :
+              `, xshift = ${n.xshift}`;
+            latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}, yshift = 0.0cm] ($${label}$) {$${label}$};\n`;
+          }
+        } else if(nodeStrategy === "positions"){
+          for( let i = 0; i < nodesList.length; i = i + 1){
+            const n = nodesList[i];
+            // console.log(`${JSON.stringify(n)}`);
+            const label = n.text;
+            const type = (n.figure === "Ellipse") ? 
+              "constructor" : 
+              "term";
+            latex = latex + 
+              `\\node[${type}={$${label}$}] (${label}) at (${n.x},${n.y}) {${label}}\n`;
+          }
+        } else {
+          alert(`BUG : not recognised node-handling strategy ${nodeStrategy}`);
         }
         latex = latex + `\\path[->]\n`;
 
@@ -706,14 +734,24 @@
         return latex;
       }
 
+      function editorToTextPosns(){
+        editorToText("positions");
+      }
+      function editorToTextRows(){
+        editorToText("rows");
+      }
+
       // Show the diagram's model in JSON format
-      function editorToText() {
+      function editorToText(nodeStrategy) {
 
         if(myDiagram.model.nodeDataArray.length > 0){
 
           document.getElementById(
             "myLatex"
-          ).value = generateLatexFromModel(myDiagram.model);
+          ).value = generateLatexFromModel(
+            myDiagram.model, 
+            nodeStrategy,
+          );
         }
 
         document.getElementById(
@@ -737,7 +775,7 @@
           ></div>
           <p>
             Double-click in the background to create a new node. 
-            A selected node will have four orange triangles that when clicked
+            A selected node will have four orange triangles that when double clicked
             will automatically copy the node and link to it. 
             Use the context menu to change the shape.
           </p>
@@ -749,7 +787,8 @@
         <div class="col-sm">
           <div id="buttons">
             <button id="loadModel" onclick="textToEditor()">TextToEditor</button>
-            <button id="saveModel" onclick="editorToText()">EditorToText</button>
+            <button id="saveModel" onclick="editorToTextPosns()">EditorToText(capture positions)</button>
+            <button id="saveModel" onclick="editorToTextRows()">EditorToText(capture rows)</button>
           </div>
           <textarea id="myLatex" style="width: 100%; height: 300px">
           </textarea>
