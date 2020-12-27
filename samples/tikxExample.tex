@@ -1,0 +1,24 @@
+\begin{tikzpicture}[construction]
+  \node[term={$v$}] (v) {v};
+  \node[constructor={u}, below = of v,yshift = 0.2cm] (u) {u};
+    \node[term={$v2$}, below left = of u, xshift = -0.5cm, yshift = 0.2cm] (v2) {v2};
+    \node[term={$v1$}, below right = of u, xshift = 0.5cm, yshift = 0.2cm] (v1) {v1};
+    \node[constructor={$u2$}, below = of v2, yshift = 0.2cm] (u2) {u2};
+    \node[constructor={$u1$}, below = of v1, yshift = 0.2cm] (u1) {u1};
+      \node[constructor={$u21$}, left = of v21, xshift = 0.5cm] (u21) {u21};
+      \node[term={$v21$}, below left = of u2, xshift = 0.0cm] (v21) {v21};
+      \node[term={$v22$}, below right = of u2, yshift = 0.5cm, xshift=-0.5cm] (v22) {v22};
+      \node[term={$v11$}, below left = of u1, yshift = 0.2cm] (v11) {v11};
+      \node[term={$v12$}, below right = of u1, yshift = 0.2cm] (v12) {v12};
+  \path[->]
+    (u) edge (v)
+    (v1) edge node[index label] {2} (u)
+    (v2) edge node[index label] {1} (u)
+    (u1) edge (v1)
+    (u2) edge (v2)
+    (v11) edge node[index label] {1} (u1)
+    (v12) edge node[index label] {2} (u1)
+    (v21) edge node[index label] {1} (u2)
+    (v22) edge node[index label] {2} (u2)
+    (u21) edge (v21);
+\end{tikzpicture}

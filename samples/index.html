@@ -455,9 +455,241 @@
         textToEditor();
       }
 
+      function arrowFrom(nodesList, linksList, j, i){
+        // console.log(`look for a link from ${j}th node to ${i}th node`);
+        const n = nodesList[i];
+        const earlierNode = nodesList[j];
+        console.log(`look for a link from ${n.text} to ${earlierNode.text}`);
+        // console.log(`look for a link from ${n.key} to ${earlierNode.key}`);
+        for( let k = 0; k < linksList.length; k = k + 1){
+          const l = linksList[k];
+          // console.log(`possibly ${JSON.stringify(l)}`);
+          if(l.from === n.key && l.to === earlierNode.key){
+            console.log(`found a link!`);
+            return true;
+          }
+        }
+        console.log(`found no link!`);
+        return false;
+      }
+
+      function generateLatexFromModel(model){
+        console.log("generateLatexFromModel");
+        let nodesList = JSON.parse(JSON.stringify(model.nodeDataArray));
+        console.log(`nodes:`);
+        nodesList.forEach((n)=>{
+          const loc = n.loc;
+          const words = loc.split(' ');
+          n.x = parseFloat(words[0]);
+          n.y = parseFloat(words[1]);
+          console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+        });
+
+        // sort nodes by y then by x
+        nodesList = nodesList.sort((a,b)=>{
+          return a.y > b.y ? 1 : (a.y < b.y ? -1 : 
+            (a.x > b.x ? 1 : (a.x < b.x ? -1 : 0)));
+        });
+        console.log(`sorted:`);
+        nodesList.forEach((n)=>{
+          console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+        });
+
+
+        console.log("determine refNodes for relative placing of nodes - use arrows");
+        for( let i = 1; i < nodesList.length; i = i + 1){
+          const n = nodesList[i];
+
+          console.log(`look for a ref for node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+          // look for an arrow from this node to one
+          // which has already been placed in a higher level
+          for( let j = i - 1; j >= 0; j = j - 1){
+            console.log(`can we use ${nodesList[j].text} as reference for ${n.text}?`);
+            if(n.y !== nodesList[j].y){
+              if(arrowFrom(nodesList, model.linkDataArray, j, i)){
+                console.log(`used ${nodesList[j].text} as refNode for ${n.text}`);
+                n.refNode = nodesList[j];
+                n.belowText = 'below ';
+                break; // no need to look for another reference node
+              }
+            }
+          }
+        }
+
+        console.log("determine refNodes for relative placing of nodes - use neighbours");
+        // Some nodes may have refNode undefined
+        // It's to be expected that the first node has no refNode.
+        // Assume that others with undefined refNodes can be placed
+        // relative to some other node either before or after, 
+        // preferably relative to a node in the same layer.
+        //
+        // If we iterate here and don't place anything new then stop
+        let placedSomething = true;
+        while(placedSomething && nodesList.filter((n)=>{
+          return n.refNode === undefined;
+        }).length > 1){
+          // there's something to define still
+          placedSomething = false;
+          for(let i = 1; i < nodesList.length; i = i + 1){
+            const n = nodesList[i];
+            if(n.refNode !== undefined){
+              continue; // already have a refNode
+            }
+            if(nodesList[i-1].y === n.y){
+              n.refNode = nodesList[i-1];
+              n.belowText = '';
+              placedSomething = true;
+              console.log(`used previous node as refNode for ${n.text}`);
+              break; // don't look for another refNode
+            } else if(nodesList[i+1] !== undefined && nodesList[i+1].y === n.y){
+              n.refNode = nodesList[i+1];
+              n.belowText = '';
+              placedSomething = true;
+              console.log(`used next node as refNode for ${n.text}`);
+              break; // don't look for another refNode
+            } else {
+              n.refNode = nodesList[i-1];
+              n.belowText = '';
+              placedSomething = true;
+              console.log(`used previous node as refNode for ${n.text}`);
+              break; // don't look for another refNode
+            }
+          }
+        }
+
+        // If we have multiple nodes from the same reference node, on the same layer,
+        // apply an x-shift to separate them.
+        for(let i = 1; i < nodesList.length - 1; i = i + 1){
+          const referrers = nodesList.filter((n)=>{
+            return n.refNode === nodesList[i];
+          });
+          if(referrers.length <= 1){
+            continue;
+          } else if(referrers.length === 2){
+            referrers[0].xshift = "-0.5cm";
+            referrers[0].leftright = "left ";
+            referrers[1].xshift = "0.5cm";
+            referrers[1].leftright = "right ";
+          } else if(referrers.length === 3){
+            referrers[0].xshift = "-0.5cm";
+            referrers[0].leftright = "left ";
+            referrers[2].xshift = "0.5cm";
+            referrers[2].leftright = "right ";
+          }
+        }
+        // If n has a refNode at the same y, use an xshift
+        for(let i = 1; i < nodesList.length - 1; i = i + 1){
+          const n = nodesList[i];
+          if(n.refNode && n.y === n.refNode.y){
+            if(n.xshift === undefined){
+              const refIndex = nodesList.findIndex((x)=>{
+                return x.key === n.refNode.key;
+              });
+              if(refIndex < i){
+                n.xshift = "0.5cm";
+                n.leftright = "right ";
+              } else if(refIndex > i){
+                n.xshift = "-0.5cm";
+                n.leftright = "left ";
+              } 
+            }
+          }
+        }
+
+
+        /*
+        console.log("determine refNodes for relative placing of nodes - adjust order");
+        // if any refNode is not before this, we need to adjust the 
+        // ordering
+        // continue until we no longer make adjustments
+        let adjustedSomething = true;
+        let numSwaps = 0;
+        while(numSwaps < 2 && adjustedSomething){
+          for(let i = 1; i < nodesList.length; i = i + 1){
+            adjustedSomething = false;
+            const n = nodesList[i];
+            if(n.refNode !== undefined){
+              const refKey = n.refNode.key;
+              const refIndex = nodesList.findIndex((nn)=>{
+                return nn.key === refKey;
+              });
+              if(refIndex > i){
+                // do some work; item at refIndex needs to be inserted
+                // before ith
+                console.log(`swap nodes : ${nodesList[refIndex].text} and ${nodesList[i].text}`);
+                console.log(`pre-swap:`);
+                nodesList.forEach((n)=>{
+                  console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+                });
+                const nodeToMove = nodesList[refIndex];
+                nodesList.splice(refIndex, 1);
+                nodesList.splice(i, 0, nodeToMove);
+                adjustedSomething = true;
+                numSwaps = numSwaps + 1;
+                console.log(`post-swap:`);
+                nodesList.forEach((n)=>{
+                  console.log(`node ${n.key}, ${n.text} at (${n.x}, ${n.y})`);
+                });
+
+                break;
+              }
+            }
+          }
+        }
+        */
+        
+        let latex = "\\begin{tikzpicture}[construction]\n";
+        for( let i = 0; i < nodesList.length; i = i + 1){
+          const n = nodesList[i];
+          const label = n.text;
+          const type = (n.figure === "Ellipse") ? 
+            "constructor" : 
+            "term";
+          const leftRightText = n.leftright === undefined ?
+            '' :
+            n.leftright;
+          const placing = n.refNode === undefined ? 
+            "" :
+            `, ${n.belowText}${leftRightText}= of ${n.refNode.text}`
+          const xshift = n.xshift === undefined ?
+            "" :
+            `, xshift = ${n.xshift}`;
+          latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}] (${label}) {${label}};\n`;
+        }
+        latex = latex + `\\path[->]\n`;
+
+        for( let i = 0; i < model.linkDataArray.length; i = i + 1){
+          const link = model.linkDataArray[i];
+          console.log(`find nodes for from = ${link.from} and to = ${link.to}`);
+          const fromText = nodesList.find((n)=>{
+            return n.key === link.from;
+          }).text;
+          const toText = nodesList.find((n)=>{
+            return n.key === link.to;
+          }).text;
+          const closingSemi = (i === model.linkDataArray.length - 1) ?
+            ';' :
+            '';
+          const labelText = (link.text === undefined || link.text === '')?
+            "" : 
+            `node[index label] {${link.text}} `;
+          latex = latex + `(${fromText}) edge ${labelText}(${toText})${closingSemi}\n`;
+        }
+
+        latex = latex + `\\end{tikzpicture}`;
+        console.log(latex);
+        return latex;
+      }
+
       // Show the diagram's model in JSON format
       function editorToText() {
-        console.log(`graph has ${myDiagram.model.nodeDataArray.length} nodes`);
+
+        if(myDiagram.model.nodeDataArray.length > 0){
+
+          document.getElementById(
+            "myLatex"
+          ).value = generateLatexFromModel(myDiagram.model);
+        }
 
         document.getElementById(
           "mySavedModel"
@@ -494,20 +726,35 @@
             <button id="loadModel" onclick="textToEditor()">TextToEditor</button>
             <button id="saveModel" onclick="editorToText()">EditorToText</button>
           </div>
+          <textarea id="myLatex" style="width: 100%; height: 300px">
+          </textarea>
           <textarea id="mySavedModel" style="width: 100%; height: 300px">
             { "class": "GraphLinksModel",
-              "nodeDataArray": [ 
-                {"key":1, "loc":"0 0", "text":"Alpha", "figure":"RoundedRectangle"},
-                {"key":2, "loc":"170 0", "text":"Beta", "figure":"RoundedRectangle"},
-                {"key":3, "loc":"0 100", "text":"Gamma", "figure":"RoundedRectangle"},
-                {"key":4, "loc":"80 180", "text":"Delta", "figure":"Ellipse"}
-            ],
-              "linkDataArray": [ 
-                {"from":1, "to":2, "text":"rfwfe"},
-                {"from":1, "to":3, "text":"label"},
-                {"from":3, "to":4, "text":"a wrgwfe label"},
-                {"from":2, "to":1, "text":"a dbdbg label"}
-            ]}
+            "nodeDataArray": [ 
+          {"text":"v", "figure":"RoundedRectangle", "key":-1, "loc":"150 -70"},
+          {"text":"v2", "figure":"RoundedRectangle", "key":-2, "loc":"50 70"},
+          {"text":"v1", "figure":"RoundedRectangle", "key":-3, "loc":"250 70"},
+          {"text":"v22", "figure":"RoundedRectangle", "key":-4, "loc":"130 230"},
+          {"text":"v11", "figure":"RoundedRectangle", "key":-5, "loc":"210 230"},
+          {"text":"v21", "figure":"RoundedRectangle", "key":-6, "loc":"10 230"},
+          {"text":"u", "figure":"Ellipse", "key":-7, "loc":"150 10"},
+          {"text":"u2", "figure":"Ellipse", "key":-8, "loc":"50 140"},
+          {"text":"u1", "figure":"Ellipse", "key":-9, "loc":"250 140"},
+          {"text":"u21", "figure":"Ellipse", "key":-10, "loc":"-80 230"},
+          {"text":"v12", "figure":"RoundedRectangle", "key":-11, "loc":"340 230"}
+           ],
+            "linkDataArray": [ 
+          {"from":-7, "to":-1, "points":[150,-10,150,-20,150,-30,150,-30,150,-40,150,-50], "text":""},
+          {"from":-2, "to":-7, "points":[80,70,90,70,140,70,140,55,140,40,140,30], "text":"1"},
+          {"from":-3, "to":-7, "points":[220,70,210,70,160,70,160,55,160,40,160,30], "text":"2"},
+          {"from":-8, "to":-2, "points":[50,120,50,110,50,105,50,105,50,100,50,90], "text":""},
+          {"from":-9, "to":-3, "points":[250,120,250,110,250,105,250,105,250,100,250,90], "text":""},
+          {"from":-10, "to":-6, "points":[-50,230,-40,230,-35,230,-35,230,-30,230,-20,230], "text":""},
+          {"from":-6, "to":-8, "points":[10,210,10,200,10,185,40,185,40,170,40,160], "text":"1"},
+          {"from":-4, "to":-8, "points":[130,210,130,200,130,185,60,185,60,170,60,160], "text":"2"},
+          {"from":-5, "to":-9, "points":[210,210,210,200,210,185,240,185,240,170,240,160], "text":"1"},
+          {"from":-11, "to":-9, "points":[340,210,340,200,340,185,260,185,260,170,260,160], "text":"2"}
+           ]}
           </textarea>
         </div>
       </div>
