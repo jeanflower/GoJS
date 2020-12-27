@@ -39,7 +39,7 @@
             if (!ok) e.diagram.currentTool.doCancel();
           },
           commandHandler: $(DrawCommandHandler), // support offset copy-and-paste
-          "clickCreatingTool.archetypeNodeData": { text: "NEW NODE" }, // create a new node by double-clicking in background
+          "clickCreatingTool.archetypeNodeData": { text: "node text" }, // create a new node by double-clicking in background
           PartCreated: function (e) {
             var node = e.subject; // the newly inserted Node -- now need to snap its location to the grid
             node.location = node.location
@@ -192,6 +192,7 @@
               var linkdata = {
                 from: selnode.key,
                 to: m.getKeyForNodeData(nodedata),
+                text: "arrow text"
               };
               m.addLinkData(linkdata); // add to model
               // move the new node to the computed location, select it, and start to edit it
