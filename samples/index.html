@@ -693,6 +693,7 @@
             latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}, yshift = 0.0cm] ($${label}$) {$${label}$};\n`;
           }
         } else if(nodeStrategy === "positions"){
+          const scale = 0.02;
           for( let i = 0; i < nodesList.length; i = i + 1){
             const n = nodesList[i];
             // console.log(`${JSON.stringify(n)}`);
@@ -701,9 +702,9 @@
               "constructor" : 
               "term";
             latex = latex + 
-              `\\node[${type}={$${label}$}] (${label}) at (${n.x},${n.y}) {${label}};\n`;
+              `\\node[${type}={$${label}$}] (${label}) at (${n.x * scale},${-n.y * scale}) {$${label}$};\n`;
           }
-        } else {
+        } else {9
           alert(`BUG : not recognised node-handling strategy ${nodeStrategy}`);
         }
         latex = latex + `\\path[->]\n`;
