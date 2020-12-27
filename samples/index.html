@@ -83,7 +83,7 @@
           {
             locationSpot: go.Spot.Center,
             locationObjectName: "SHAPE",
-            desiredSize: new go.Size(120, 60),
+            desiredSize: new go.Size(60, 40),
             minSize: new go.Size(40, 40),
             resizable: true,
             resizeCellSize: new go.Size(20, 20),
@@ -134,25 +134,6 @@
             // this Binding is TwoWay due to the user editing the text with the TextEditingTool
             new go.Binding("text").makeTwoWay(),
             new go.Binding("stroke", "color")
-          )
-        );
-
-        myDiagram.nodeTemplate.toolTip = $(
-          "ToolTip", // show some detailed information
-          $(
-            go.Panel,
-            "Vertical",
-            { maxSize: new go.Size(200, NaN) }, // limit width but not height
-            $(
-              go.TextBlock,
-              { font: "bold 10pt sans-serif", textAlign: "center" },
-              new go.Binding("text")
-            ),
-            $(
-              go.TextBlock,
-              { font: "10pt sans-serif", textAlign: "center" },
-              new go.Binding("text", "details")
-            )
           )
         );
 
