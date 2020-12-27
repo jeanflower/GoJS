@@ -476,6 +476,7 @@
       function generateLatexFromModel(model){
         console.log("generateLatexFromModel");
         let nodesList = JSON.parse(JSON.stringify(model.nodeDataArray));
+        let linksList = JSON.parse(JSON.stringify(model.linkDataArray));
         console.log(`nodes:`);
         nodesList.forEach((n)=>{
           const loc = n.loc;
@@ -506,7 +507,7 @@
           for( let j = i - 1; j >= 0; j = j - 1){
             console.log(`can we use ${nodesList[j].text} as reference for ${n.text}?`);
             if(n.y !== nodesList[j].y){
-              if(arrowFrom(nodesList, model.linkDataArray, j, i)){
+              if(arrowFrom(nodesList, linksList, j, i)){
                 console.log(`used ${nodesList[j].text} as refNode for ${n.text}`);
                 n.refNode = nodesList[j];
                 n.belowText = 'below ';
@@ -637,6 +638,30 @@
           }
         }
         */
+
+        // handle arrows with matchinf sources and targets - add bend
+        for( let i = 0; i < linksList.length; i = i + 1){
+          const link = linksList[i];
+          if(link.bend === undefined){
+            const sameLinks = linksList.filter((l)=>{
+              return l.from === link.from && l.to === link.to;
+            });
+            if(sameLinks.length === 2){
+              sameLinks[0].bend = "[bend left = 30] ";
+              sameLinks[1].bend = "[bend right = 30] ";
+            } else if(sameLinks.length === 3){
+              sameLinks[0].bend = "[bend left = 30] ";
+              sameLinks[1].bend = "[bend right = 0] ";
+              sameLinks[2].bend = "[bend right = 30] ";
+            } else if(sameLinks.length === 4){
+              let angle = 0;
+              for( let j = 0; j < sameLinks.length; j = j + 1){
+                sameLinks[j].bend = `[bend right = ${angle}] `;
+                angle = angle + 5;
+              }
+            }
+          }
+        }        
         
         let latex = "\\begin{tikzpicture}[construction]\n";
         for( let i = 0; i < nodesList.length; i = i + 1){
@@ -658,8 +683,8 @@
         }
         latex = latex + `\\path[->]\n`;
 
-        for( let i = 0; i < model.linkDataArray.length; i = i + 1){
-          const link = model.linkDataArray[i];
+        for( let i = 0; i < linksList.length; i = i + 1){
+          const link = linksList[i];
           console.log(`find nodes for from = ${link.from} and to = ${link.to}`);
           const fromText = nodesList.find((n)=>{
             return n.key === link.from;
@@ -667,13 +692,16 @@
           const toText = nodesList.find((n)=>{
             return n.key === link.to;
           }).text;
-          const closingSemi = (i === model.linkDataArray.length - 1) ?
+          const bendText = link.bend === undefined ? 
+            "[bend right = 0] " :
+            `${link.bend}`;
+          const closingSemi = (i === linksList.length - 1) ?
             ';' :
             '';
           const labelText = (link.text === undefined || link.text === '')?
             "" : 
             `node[index label] {${link.text}} `;
-          latex = latex + `(${fromText}) edge ${labelText}(${toText})${closingSemi}\n`;
+          latex = latex + `(${fromText}) edge${bendText}${labelText}(${toText})${closingSemi}\n`;
         }
 
         latex = latex + `\\end{tikzpicture}`;
