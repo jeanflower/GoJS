@@ -746,13 +746,21 @@
       function editorToText(nodeStrategy) {
 
         if(myDiagram.model.nodeDataArray.length > 0){
-
-          document.getElementById(
-            "myLatex"
-          ).value = generateLatexFromModel(
+          const text = generateLatexFromModel(
             myDiagram.model, 
             nodeStrategy,
           );
+          navigator.clipboard.writeText(text).then(
+            function() {
+              console.log(`latex on clipboard`);
+            },
+            function(err) {
+              console.error('Async: Could not copy text: ', err);
+            },
+          );
+          document.getElementById(
+              "myLatex"
+            ).value = text;
         }
 
         document.getElementById(
@@ -788,8 +796,8 @@
         <div class="col-sm">
           <div id="buttons">
             <button id="loadModel" onclick="textToEditor()">TextToEditor</button>
-            <button id="saveModel" onclick="editorToTextPosns()">EditorToText(capture positions)</button>
-            <button id="saveModel" onclick="editorToTextRows()">EditorToText(capture rows)</button>
+            <button id="saveModelPosns" onclick="editorToTextPosns()">Make text on clipboard (capture positions)</button>
+            <button id="saveModelRows" onclick="editorToTextRows()">Make text on clipboard (capture rows)</button>
           </div>
           <textarea id="myLatex" style="width: 100%; height: 300px">
           </textarea>
