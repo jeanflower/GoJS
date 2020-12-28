@@ -752,7 +752,7 @@
           );
           navigator.clipboard.writeText(text).then(
             function() {
-              console.log(`latex on clipboard`);
+              alert(`LaTeX on clipboard`);
             },
             function(err) {
               console.error('Async: Could not copy text: ', err);
@@ -762,10 +762,21 @@
               "myLatex"
             ).value = text;
         }
-
+        myDiagram.isModified = false;
+      }
+      function editorToGoJS(){
+        const text = myDiagram.model.toJson();
         document.getElementById(
           "mySavedModel"
-        ).value = myDiagram.model.toJson();
+        ).value = text;
+        navigator.clipboard.writeText(text).then(
+            function() {
+              alert(`GoJS on clipboard`);
+            },
+            function(err) {
+              console.error('Async: Could not copy text: ', err);
+            },
+          );
         myDiagram.isModified = false;
       }
       function textToEditor() {
@@ -776,61 +787,58 @@
     </script>
   </head>
   <body onload="init()">
-    <div class="container" id="sample">
-      <div class="row">
-        <div class="col-lg">
-          <div id="myDiagramDiv"
-            style="border: solid 1px black; width: 100%; height: 400px"
-          ></div>
-          <p>
-            Double-click in the background to create a new node. 
-            A selected node will have four orange triangles that when double clicked
-            will automatically copy the node and link to it. 
-            Use the context menu to change the shape.
-          </p>
-          <p>
-            Links can be drawn by dragging from the side of each node. A selected
-            link can be reconnected by dragging an end handle. 
-          </p>
-        </div><!-- end col -->
-        <div class="col-sm">
-          <div id="buttons">
-            <button id="loadModel" onclick="textToEditor()">TextToEditor</button>
-            <button id="saveModelPosns" onclick="editorToTextPosns()">Make text on clipboard (capture positions)</button>
-            <button id="saveModelRows" onclick="editorToTextRows()">Make text on clipboard (capture rows)</button>
-          </div>
-          <textarea id="myLatex" style="width: 100%; height: 300px">
-          </textarea>
-          <textarea id="mySavedModel" style="width: 100%; height: 300px">
-            { "class": "GraphLinksModel",
-            "nodeDataArray": [ 
-          {"text":"v", "figure":"RoundedRectangle", "key":-1, "loc":"150 -70"},
-          {"text":"v2", "figure":"RoundedRectangle", "key":-2, "loc":"50 70"},
-          {"text":"v1", "figure":"RoundedRectangle", "key":-3, "loc":"250 70"},
-          {"text":"v22", "figure":"RoundedRectangle", "key":-4, "loc":"130 230"},
-          {"text":"v11", "figure":"RoundedRectangle", "key":-5, "loc":"210 230"},
-          {"text":"v21", "figure":"RoundedRectangle", "key":-6, "loc":"10 230"},
-          {"text":"u", "figure":"Ellipse", "key":-7, "loc":"150 10"},
-          {"text":"u2", "figure":"Ellipse", "key":-8, "loc":"50 140"},
-          {"text":"u1", "figure":"Ellipse", "key":-9, "loc":"250 140"},
-          {"text":"u21", "figure":"Ellipse", "key":-10, "loc":"-80 230"},
-          {"text":"v12", "figure":"RoundedRectangle", "key":-11, "loc":"340 230"}
-           ],
-            "linkDataArray": [ 
-          {"from":-7, "to":-1, "points":[150,-10,150,-20,150,-30,150,-30,150,-40,150,-50], "text":""},
-          {"from":-2, "to":-7, "points":[80,70,90,70,140,70,140,55,140,40,140,30], "text":"1"},
-          {"from":-3, "to":-7, "points":[220,70,210,70,160,70,160,55,160,40,160,30], "text":"2"},
-          {"from":-8, "to":-2, "points":[50,120,50,110,50,105,50,105,50,100,50,90], "text":""},
-          {"from":-9, "to":-3, "points":[250,120,250,110,250,105,250,105,250,100,250,90], "text":""},
-          {"from":-10, "to":-6, "points":[-50,230,-40,230,-35,230,-35,230,-30,230,-20,230], "text":""},
-          {"from":-6, "to":-8, "points":[10,210,10,200,10,185,40,185,40,170,40,160], "text":"1"},
-          {"from":-4, "to":-8, "points":[130,210,130,200,130,185,60,185,60,170,60,160], "text":"2"},
-          {"from":-5, "to":-9, "points":[210,210,210,200,210,185,240,185,240,170,240,160], "text":"1"},
-          {"from":-11, "to":-9, "points":[340,210,340,200,340,185,260,185,260,170,260,160], "text":"2"}
-           ]}
-          </textarea>
-        </div>
-      </div>
+    <h3>GoJS diagram editor</h3>
+    <div id="myDiagramDiv"
+      style="border: solid 1px black; width: 100%; height: 400px"
+    ></div>
+    <div id="buttons">
+      <button id="saveModelPosns" onclick="editorToTextPosns()">Generate and copy LaTeX (positions)</button>
+      <button id="saveModelRows" onclick="editorToTextRows()">Generate and copy LaTeX (rows)</button>
+      <button id="saveModelGoJS" onclick="editorToGoJS()">Generate and copy GoJS</button>
+      <button id="loadModel" onclick="textToEditor()">TextToEditor</button>
     </div>
+
+    <h3>Editor guide</h3>
+      Double-click in the background to create a new node. 
+      Right-click a node to change its type (shape).
+      A selected node will have four orange triangles that when double clicked
+      will automatically copy the node and link to it. 
+    </p>
+    <p>
+      Links can be drawn by dragging from the border of each node (look for the hand icon). 
+      A selected link can be reconnected by dragging an end handle. 
+    </p>
+    <h3>Diagram as LaTeX</h3>
+    <textarea id="myLatex" style="width: 100%; height: 300px">
+    </textarea>
+    <h3>GoJS diagram as JSON text</h3>
+    <textarea id="mySavedModel" style="width: 100%; height: 300px">
+      { "class": "GraphLinksModel",
+      "nodeDataArray": [ 
+    {"text":"v", "figure":"RoundedRectangle", "key":-1, "loc":"150 -70"},
+    {"text":"v2", "figure":"RoundedRectangle", "key":-2, "loc":"50 70"},
+    {"text":"v1", "figure":"RoundedRectangle", "key":-3, "loc":"250 70"},
+    {"text":"v22", "figure":"RoundedRectangle", "key":-4, "loc":"130 230"},
+    {"text":"v11", "figure":"RoundedRectangle", "key":-5, "loc":"210 230"},
+    {"text":"v21", "figure":"RoundedRectangle", "key":-6, "loc":"10 230"},
+    {"text":"u", "figure":"Ellipse", "key":-7, "loc":"150 10"},
+    {"text":"u2", "figure":"Ellipse", "key":-8, "loc":"50 140"},
+    {"text":"u1", "figure":"Ellipse", "key":-9, "loc":"250 140"},
+    {"text":"u21", "figure":"Ellipse", "key":-10, "loc":"-80 230"},
+    {"text":"v12", "figure":"RoundedRectangle", "key":-11, "loc":"340 230"}
+      ],
+      "linkDataArray": [ 
+    {"from":-7, "to":-1, "points":[150,-10,150,-20,150,-30,150,-30,150,-40,150,-50], "text":""},
+    {"from":-2, "to":-7, "points":[80,70,90,70,140,70,140,55,140,40,140,30], "text":"1"},
+    {"from":-3, "to":-7, "points":[220,70,210,70,160,70,160,55,160,40,160,30], "text":"2"},
+    {"from":-8, "to":-2, "points":[50,120,50,110,50,105,50,105,50,100,50,90], "text":""},
+    {"from":-9, "to":-3, "points":[250,120,250,110,250,105,250,105,250,100,250,90], "text":""},
+    {"from":-10, "to":-6, "points":[-50,230,-40,230,-35,230,-35,230,-30,230,-20,230], "text":""},
+    {"from":-6, "to":-8, "points":[10,210,10,200,10,185,40,185,40,170,40,160], "text":"1"},
+    {"from":-4, "to":-8, "points":[130,210,130,200,130,185,60,185,60,170,60,160], "text":"2"},
+    {"from":-5, "to":-9, "points":[210,210,210,200,210,185,240,185,240,170,240,160], "text":"1"},
+    {"from":-11, "to":-9, "points":[340,210,340,200,340,185,260,185,260,170,260,160], "text":"2"}
+      ]}
+    </textarea>
   </body>
 </html>
