@@ -690,7 +690,7 @@
             const xshift = n.xshift === undefined ?
               ", xshift = 0.0cm" :
               `, xshift = ${n.xshift}`;
-            latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}, yshift = 0.0cm] ($${label}$) {$${label}$};\n`;
+            latex = latex + `\\node[${type}={$${label}$}${placing}${xshift}, yshift = 0.0cm] (${label}) {$${label}$};\n`;
           }
         } else if(nodeStrategy === "positions"){
           const scale = 0.02;
