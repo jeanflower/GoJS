@@ -83,8 +83,8 @@
           {
             locationSpot: go.Spot.Center,
             locationObjectName: "SHAPE",
-            desiredSize: new go.Size(60, 40),
-            minSize: new go.Size(40, 40),
+            desiredSize: new go.Size(40, 20),
+            minSize: new go.Size(40, 20),
             resizable: true,
             resizeCellSize: new go.Size(20, 20),
           },
@@ -118,8 +118,8 @@
           ),
           // this Shape prevents mouse events from reaching the middle of the port
           $(go.Shape, {
-            width: 100,
-            height: 40,
+            width: 10,
+            height: 10,
             strokeWidth: 0,
             fill: "transparent",
           }),
@@ -815,30 +815,16 @@
     <textarea id="mySavedModel" style="width: 100%; height: 300px">
       { "class": "GraphLinksModel",
       "nodeDataArray": [ 
-    {"text":"v", "figure":"RoundedRectangle", "key":-1, "loc":"150 -70"},
-    {"text":"v2", "figure":"RoundedRectangle", "key":-2, "loc":"50 70"},
-    {"text":"v1", "figure":"RoundedRectangle", "key":-3, "loc":"250 70"},
-    {"text":"v22", "figure":"RoundedRectangle", "key":-4, "loc":"130 230"},
-    {"text":"v11", "figure":"RoundedRectangle", "key":-5, "loc":"210 230"},
-    {"text":"v21", "figure":"RoundedRectangle", "key":-6, "loc":"10 230"},
-    {"text":"u", "figure":"Ellipse", "key":-7, "loc":"150 10"},
-    {"text":"u2", "figure":"Ellipse", "key":-8, "loc":"50 140"},
-    {"text":"u1", "figure":"Ellipse", "key":-9, "loc":"250 140"},
-    {"text":"u21", "figure":"Ellipse", "key":-10, "loc":"-80 230"},
-    {"text":"v12", "figure":"RoundedRectangle", "key":-11, "loc":"340 230"}
-      ],
+    {"text":"v", "figure":"RoundedRectangle", "key":-1, "loc":"160 -210"},
+    {"text":"v2", "figure":"RoundedRectangle", "key":-2, "loc":"120 -110"},
+    {"text":"v1", "figure":"RoundedRectangle", "key":-3, "loc":"200 -110"},
+    {"text":"u", "figure":"Ellipse", "key":-7, "loc":"160 -160"}
+     ],
       "linkDataArray": [ 
-    {"from":-7, "to":-1, "points":[150,-10,150,-20,150,-30,150,-30,150,-40,150,-50], "text":""},
-    {"from":-2, "to":-7, "points":[80,70,90,70,140,70,140,55,140,40,140,30], "text":"1"},
-    {"from":-3, "to":-7, "points":[220,70,210,70,160,70,160,55,160,40,160,30], "text":"2"},
-    {"from":-8, "to":-2, "points":[50,120,50,110,50,105,50,105,50,100,50,90], "text":""},
-    {"from":-9, "to":-3, "points":[250,120,250,110,250,105,250,105,250,100,250,90], "text":""},
-    {"from":-10, "to":-6, "points":[-50,230,-40,230,-35,230,-35,230,-30,230,-20,230], "text":""},
-    {"from":-6, "to":-8, "points":[10,210,10,200,10,185,40,185,40,170,40,160], "text":"1"},
-    {"from":-4, "to":-8, "points":[130,210,130,200,130,185,60,185,60,170,60,160], "text":"2"},
-    {"from":-5, "to":-9, "points":[210,210,210,200,210,185,240,185,240,170,240,160], "text":"1"},
-    {"from":-11, "to":-9, "points":[340,210,340,200,340,185,260,185,260,170,260,160], "text":"2"}
-      ]}
+    {"from":-7, "to":-1, "points":[160,-170,160,-180,160,-185,160,-185,160,-190,160,-200], "text":""},
+    {"from":-2, "to":-7, "points":[120,-120,120,-130,120,-135,153.33333333333334,-135,153.33333333333334,-140,153.33333333333334,-150], "text":"1"},
+    {"from":-3, "to":-7, "points":[200,-120,200,-130,200,-135,166.66666666666666,-135,166.66666666666666,-140,166.66666666666666,-150], "text":"2"}
+     ]}
     </textarea>
   </body>
 </html>
